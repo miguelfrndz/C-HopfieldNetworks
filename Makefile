@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -Wextra -Werror -DDEBUG -g
+# CFLAGS = -Wall -Wextra -Werror -g
 LDFLAGS = -lm
 TARGET = HopfieldNetworks
 SRCS = HopfieldNetworks.c utils.c
