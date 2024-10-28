@@ -1,6 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -DDEBUG -g
-# CFLAGS = -Wall -Wextra -Werror -g
+CFLAGS = -Wall -Wextra -Werror -g
 LDFLAGS = -lm
 TARGET = HopfieldNetworks
 SRCS = HopfieldNetworks.c utils.c
@@ -13,6 +12,9 @@ $(TARGET): $(OBJS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
+
+debug: CFLAGS += -DDEBUG
+debug: $(TARGET)
 
 clean:
 	rm -f $(OBJS) $(TARGET)

@@ -29,12 +29,12 @@ Dataset readDataset(char *filename, SplitType split) {
     fscanf(file, "%d", &dataset.features);
 
     // Allocate memory for the input and output arrays
-    dataset.input = (float **)malloc(dataset.instances * sizeof(float *));
+    dataset.input = (int **)malloc(dataset.instances * sizeof(int *));
     dataset.output = (int *)malloc(dataset.instances * sizeof(int));
     for (int i = 0; i < dataset.instances; i++) {
-        dataset.input[i] = (float *)malloc(dataset.features * sizeof(float));
+        dataset.input[i] = (int *)malloc(dataset.features * sizeof(int));
         for (int j = 0; j < dataset.features; j++) {
-            fscanf(file, "%f", &dataset.input[i][j]);
+            fscanf(file, "%d", &dataset.input[i][j]);
         }
         // Add label of the instance to the output array
         fscanf(file, "%d", &dataset.output[i]);

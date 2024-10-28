@@ -24,109 +24,83 @@ HopfieldNetwork createHopfieldNetwork(int neurons) {
     return network;
 }
 
+float computeEnergy(HopfieldNetwork *network, int *state) {
+    float energy = 0.0;
+    int features = network->neurons;
+    for (int i = 0; i < features; i++) {
+        for (int j = i + 1; j < features; j++) {  // Avoid double counting
+            energy += network->weights[i][j] * state[i] * state[j];
+        }
+    }
+    return -0.5 * energy;
+}
+
+void trainHopfieldNetwork(HopfieldNetwork *network, Dataset trainData) {
+    int features = network->neurons;
+    for (int inst = 0; inst < trainData.instances; inst++) {
+        int *state = trainData.input[inst];
+        // Print the state at iteration inst
+        #ifdef DEBUG
+            printf("State at iteration %d: ", inst);
+            for (int i = 0; i < features; i++) {
+                printf("%d ", state[i]);
+            }
+            printf("\n");
+        #endif
+        for (int i = 0; i < features; i++) {
+            for (int j = i + 1; j < features; j++) {
+                network->weights[i][j] += (2 * state[i] - 1) * (2 * state[j] - 1);
+                network->weights[j][i] = network->weights[i][j];  // Ensure symmetry
+            }
+            // Set diagonal to zero
+            network->weights[i][i] = 0.0;
+        }
+        // Print the energy of the network after each training instance
+        #ifdef DEBUG
+            float energy = computeEnergy(network, state);
+            printf("Energy after training instance %d: %.2f\n", inst, energy);
+        #endif
+    }
+}
+
+void updateState(HopfieldNetwork *network, int *state) {
+    int features = network->neurons;
+    int stable;
+    do {
+        stable = 1;
+        for (int i = 0; i < features; i++) {
+            float sum = 0.0;
+            for (int j = 0; j < features; j++) {
+                sum += network->weights[i][j] * state[j];
+            }
+            int new_state = sum > THRESHOLD ? 1 : 0;
+            if (new_state != state[i]) {
+                stable = 0;
+                state[i] = new_state;
+            }
+        }
+    } while (!stable);
+}
+
 int main(int argc, char const *argv[]) {
     (void)argc, (void)argv;
     Dataset trainData = readDataset("data/train.txt", TRAIN);
     Dataset testData = readDataset("data/test.txt", TEST);
-    assert (trainData.features == testData.features && "Number of features in the training and testing datasets should be the same");
+    assert(trainData.features == testData.features && "Number of features in the training and testing datasets should be the same");
     int features = trainData.features;
-    printf("Number of features: %d\n", features);
-    printf("Number of instances in the train set: %d\n", trainData.instances);
-    printf("Number of instances in the test set: %d\n", testData.instances);
 
-    // Initialize the Hopfield network
     HopfieldNetwork network = createHopfieldNetwork(features);
+    trainHopfieldNetwork(&network, trainData);
 
-    // Initialize the state of the network
     int *state = malloc(features * sizeof(int));
-    for (int i = 0; i < features; i++) {
-        // state[i] = trainData.input[0][i];
-        state[i] = rand() % 2;
-        // state[i] = 0;
-    }
-
-    // Print the initial state of the network
-    printf("Initial state of the network:\n");
-    for (int i = 0; i < features; i++) {
-        printf("%d ", state[i]);
-    }
-    printf("\n");
-
-    // Update the weights of the Hopfield network
-    for (int inst = 0; inst < trainData.instances; inst++) {
-        // Update the weights of the network using Hebb's rule
-        for (int i = 0; i < features; i++) {
-            for (int j = 0; j < features; j++) {
-                network.weights[i][j] += (2*state[i] - 1) * (2*state[j] - 1);
-                network.weights[j][i] = network.weights[i][j];  // Ensure symmetry
-            }
-            // Update the diagonal elements of the weight matrix to 0
-            network.weights[i][i] = 0.0;
-        }
-    }
-    // Normalize the weights of the network
-    for (int i = 0; i < features; i++) {
-        for (int j = 0; j < features; j++) {
-            network.weights[i][j] /= features;
-        }
-    }
-
-    // Update the state of the network using the input pattern
-    for (int i = 0; i < features; i++) {
-        float sum = 0.0;
-        for (int j = 0; j < features; j++) {
-            sum += network.weights[i][j] * state[j];
-        }
-        state[i] = sum > THRESHOLD ? 1 : 0;
-    }
-    // compute the energy of the network
-    float energy = 0.0;
-    for (int i = 0; i < features; i++) {
-        for (int j = 0; j < features; j++) {
-            energy += network.weights[i][j] * state[i] * state[j];
-        }
-    }
-    energy *= -0.5;
-    // for (int i = 0; i < features; i++) {
-    //     energy -= state[i] * THRESHOLD;
-    // }
-    #ifdef DEBUG
-        printf("Energy of the network: %.2f\n", energy);
-    #endif
-    
-    // Print the final state of the network
-    printf("Final state of the network (after training):\n");
-    for (int i = 0; i < features; i++) {
-        printf("%d ", state[i]);
-    }
-    printf("\n");
-
-    // Test the network using the test dataset
     int correct_predictions = 0;
     for (int test_inst = 0; test_inst < testData.instances; test_inst++) {
-        // Initialize the network state to the current test pattern
         for (int i = 0; i < features; i++) {
-            state[i] = testData.input[test_inst][i];  // 0 and 1 as binary states
+            state[i] = testData.input[test_inst][i];
         }
 
-        // Run the network until convergence
-        int stable;
-        do {
-            stable = 1;
-            for (int i = 0; i < features; i++) {
-                float sum = 0.0;
-                for (int j = 0; j < features; j++) {
-                    sum += network.weights[i][j] * state[j];
-                }
-                int new_state = sum > THRESHOLD ? 1 : 0;
-                if (new_state != state[i]) {
-                    stable = 0;  // Not yet converged
-                    state[i] = new_state;
-                }
-            }
-        } while (!stable);  // Repeat until all neurons are stable
+        updateState(&network, state);
 
-        // Check if the final state matches the target pattern for this test instance
         int match = 1;
         for (int i = 0; i < features; i++) {
             if (state[i] != testData.output[test_inst]) {
@@ -137,12 +111,13 @@ int main(int argc, char const *argv[]) {
         if (match) correct_predictions++;
     }
 
-    // Calculate accuracy
     float accuracy = ((float)correct_predictions / testData.instances) * 100.0;
     printf("Accuracy on test set: %.2f%%\n", accuracy);
 
-
-    // Free the memory allocated for the input and output arrays + state
+    for (int i = 0; i < features; i++) {
+        free(network.weights[i]);
+    }
+    free(network.weights);
     freeDataset(trainData);
     freeDataset(testData);
     free(state);

@@ -10,7 +10,7 @@ typedef enum {
 typedef struct {
     int instances;
     int features;
-    float **input;
+    int **input;
     int *output;
     SplitType split;
 } Dataset;
