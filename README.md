@@ -1,4 +1,4 @@
-# C-HopfieldNetworks
+# Hopfield Networks in C
 A simple implementation of traditional Hopfield Networks (w/ binary states) in C. A two-class binarized subset of MNIST is used as a toy example.
 
 ## How to Use This Code?
