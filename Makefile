@@ -14,6 +14,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG
+debug: clean
 debug: $(TARGET)
 
 clean:

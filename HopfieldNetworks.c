@@ -76,8 +76,8 @@ void trainHopfieldNetwork(HopfieldNetwork *network, Dataset trainData) {
 
 void updateState(HopfieldNetwork *network, int *state) {
     int features = network->neurons;
-    int stable;
-    do {
+    int stable = 0;
+    while (!stable) {
         stable = 1;
         for (int i = 0; i < features; i++) {
             float sum = 0.0;
@@ -90,7 +90,61 @@ void updateState(HopfieldNetwork *network, int *state) {
                 state[i] = new_state;
             }
         }
-    } while (!stable);
+    }
+}
+
+void evaluateHopfieldNetwork(HopfieldNetwork *network, Dataset testData, Dataset trainData) {
+    int features = network->neurons;
+    int *state = malloc(features * sizeof(int));
+    int correct_predictions = 0;
+    for (int test_inst = 0; test_inst < testData.instances; test_inst++) {
+        for (int i = 0; i < features; i++) {
+            state[i] = testData.input[test_inst][i];
+        }
+        updateState(network, state);
+        /* 
+        Make prediction and compare with ground-truth:
+            - If the stable state matches a specific stored pattern, assign the corresponding binary label (either 1 or 0).
+            - If no exact match is found, use a similarity threshold (e.g., Hamming distance) to classify the pattern based on the closest stored pattern.
+        */
+        int match_found = 0;
+        int prediction = -1;
+        int min_distance = features;
+        for (int inst = 0; inst < trainData.instances; inst++) {
+            int distance = 0;
+            for (int i = 0; i < features; i++) {
+                distance += state[i] != trainData.input[inst][i];
+            }
+            if (distance < min_distance) {
+                min_distance = distance;
+                prediction = trainData.output[inst];
+            }
+            if (distance == 0) {
+                match_found = 1;
+                break;
+            }
+        }
+        #ifdef DEBUG
+            // Print if the prediction was made by exact match or proximity by Hamming distance
+            if (match_found) {
+                printf(">> Test instance %d - Prediction made by exact match\n", test_inst);
+            } else {
+                printf(">> Test instance %d - Prediction made by proximity\n", test_inst);
+            }
+            // Print the network prediction and the ground truth
+            printf("Test instance %d - Ground Truth: %d, Prediction: %d\n", test_inst, testData.output[test_inst], prediction);
+        #else
+            // Suppress unused variable warning (only for DEBUG mode)
+            (void)match_found;
+        #endif
+
+        if (testData.output[test_inst] == prediction) {
+            correct_predictions++;
+        }
+    }
+    float accuracy = ((float)correct_predictions / testData.instances) * 100.0;
+    printf("Accuracy on test set: %.2f%%\n", accuracy);
+    free(state);
 }
 
 int main(int argc, char const *argv[]) {
@@ -102,41 +156,10 @@ int main(int argc, char const *argv[]) {
 
     HopfieldNetwork network = createHopfieldNetwork(features);
     trainHopfieldNetwork(&network, trainData);
-
-    int *state = malloc(features * sizeof(int));
-    int correct_predictions = 0;
-    for (int test_inst = 0; test_inst < testData.instances; test_inst++) {
-        for (int i = 0; i < features; i++) {
-            state[i] = testData.input[test_inst][i];
-        }
-
-        updateState(&network, state);
-
-        // Check if the resulting state matches any training pattern
-        int match_found = 0;
-        for (int train_inst = 0; train_inst < trainData.instances; train_inst++) {
-            int match = 1;
-            for (int i = 0; i < features; i++) {
-                if (state[i] != trainData.input[train_inst][i]) {
-                    match = 0;
-                    break;
-                }
-            }
-            if (match) {
-                match_found = 1;
-                break;
-            }
-        }
-
-        if (match_found) correct_predictions++;
-    }
-
-    float accuracy = ((float)correct_predictions / testData.instances) * 100.0;
-    printf("Accuracy on test set: %.2f%%\n", accuracy);
+    evaluateHopfieldNetwork(&network, testData, trainData);
 
     freeHopfieldNetwork(network);
     freeDataset(trainData);
     freeDataset(testData);
-    free(state);
     return 0;
 }
