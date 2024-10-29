@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -g
-LDFLAGS = -lm
+LDFLAGS = 
 TARGET = HopfieldNetworks
 SRCS = HopfieldNetworks.c utils.c
 OBJS = $(SRCS:.c=.o)

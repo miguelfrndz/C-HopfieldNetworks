@@ -24,6 +24,13 @@ HopfieldNetwork createHopfieldNetwork(int neurons) {
     return network;
 }
 
+void freeHopfieldNetwork(HopfieldNetwork network) {
+    for (int i = 0; i < network.neurons; i++) {
+        free(network.weights[i]);
+    }
+    free(network.weights);
+}
+
 float computeEnergy(HopfieldNetwork *network, int *state) {
     float energy = 0.0;
     int features = network->neurons;
@@ -54,6 +61,10 @@ void trainHopfieldNetwork(HopfieldNetwork *network, Dataset trainData) {
             }
             // Set diagonal to zero
             network->weights[i][i] = 0.0;
+            // Normalize the weights
+            for (int j = 0; j < features; j++) {
+                network->weights[i][j] /= features;
+            }
         }
         // Print the energy of the network after each training instance
         #ifdef DEBUG
@@ -101,23 +112,29 @@ int main(int argc, char const *argv[]) {
 
         updateState(&network, state);
 
-        int match = 1;
-        for (int i = 0; i < features; i++) {
-            if (state[i] != testData.output[test_inst]) {
-                match = 0;
+        // Check if the resulting state matches any training pattern
+        int match_found = 0;
+        for (int train_inst = 0; train_inst < trainData.instances; train_inst++) {
+            int match = 1;
+            for (int i = 0; i < features; i++) {
+                if (state[i] != trainData.input[train_inst][i]) {
+                    match = 0;
+                    break;
+                }
+            }
+            if (match) {
+                match_found = 1;
                 break;
             }
         }
-        if (match) correct_predictions++;
+
+        if (match_found) correct_predictions++;
     }
 
     float accuracy = ((float)correct_predictions / testData.instances) * 100.0;
     printf("Accuracy on test set: %.2f%%\n", accuracy);
 
-    for (int i = 0; i < features; i++) {
-        free(network.weights[i]);
-    }
-    free(network.weights);
+    freeHopfieldNetwork(network);
     freeDataset(trainData);
     freeDataset(testData);
     free(state);
