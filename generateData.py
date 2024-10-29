@@ -2,6 +2,7 @@ import os
 import numpy as np
 from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
 
 # If data folder does not exist, create it
 if not os.path.exists('data'):
@@ -38,3 +39,10 @@ save_to_txt('data/train.txt', X_train, y_train)
 save_to_txt('data/test.txt', X_test, y_test)
 
 print("Data saved successfully!")
+
+# Train a logistic regression model as a baseline
+model = LogisticRegression()
+model.fit(X_train, y_train)
+# Evaluate the model
+score = model.score(X_test, y_test)
+print(f"Baseline Logistic Regression Accuracy: {score}")
