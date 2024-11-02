@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 #include "utils.h"
 
 #define THRESHOLD 0.0
@@ -76,32 +77,33 @@ void trainHopfieldNetwork(HopfieldNetwork *network, Dataset trainData) {
 
 void updateState(HopfieldNetwork *network, int *state) {
     int features = network->neurons;
-    int stable = 0;
-    while (!stable) {
-        stable = 1;
-        for (int i = 0; i < features; i++) {
-            float sum = 0.0;
-            for (int j = 0; j < features; j++) {
-                sum += network->weights[i][j] * state[j];
-            }
-            int new_state = sum > THRESHOLD ? 1 : 0;
-            if (new_state != state[i]) {
-                stable = 0;
-                state[i] = new_state;
-            }
+    // State should be the sign of weights * state
+    for (int i = 0; i < features; i++) {
+        float activation = 0.0;
+        for (int j = 0; j < features; j++) {
+            activation += network->weights[i][j] * state[j];
         }
+        state[i] = activation > THRESHOLD ? 1 : 0;
     }
 }
 
-void evaluateHopfieldNetwork(HopfieldNetwork *network, Dataset testData, Dataset trainData) {
+void evaluateHopfieldNetwork(HopfieldNetwork *network, Dataset testData, Dataset trainData, int sync_iterations) {
     int features = network->neurons;
     int *state = malloc(features * sizeof(int));
     int correct_predictions = 0;
+    float energy;
     for (int test_inst = 0; test_inst < testData.instances; test_inst++) {
-        for (int i = 0; i < features; i++) {
-            state[i] = testData.input[test_inst][i];
+        // Syncronous update of the network (i.e, update all neurons at the same time until convergence)
+        memcpy(state, testData.input[test_inst], features * sizeof(int));
+        energy = computeEnergy(network, state);
+        for (int iter = 0; iter < sync_iterations; iter++) {
+            updateState(network, state);
+            float new_energy = computeEnergy(network, state);
+            if (new_energy == energy) {
+                break;
+            }
+            energy = new_energy;
         }
-        updateState(network, state);
         /* 
         Make prediction and compare with ground-truth:
             - If the stable state matches a specific stored pattern, assign the corresponding binary label (either 1 or 0).
@@ -156,7 +158,8 @@ int main(int argc, char const *argv[]) {
 
     HopfieldNetwork network = createHopfieldNetwork(features);
     trainHopfieldNetwork(&network, trainData);
-    evaluateHopfieldNetwork(&network, testData, trainData);
+    int sync_iterations = 100;
+    evaluateHopfieldNetwork(&network, testData, trainData, sync_iterations);
 
     freeHopfieldNetwork(network);
     freeDataset(trainData);
