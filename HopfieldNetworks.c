@@ -77,7 +77,6 @@ void trainHopfieldNetwork(HopfieldNetwork *network, Dataset trainData) {
 
 void updateState(HopfieldNetwork *network, int *state) {
     int features = network->neurons;
-    // State should be the sign of weights * state
     for (int i = 0; i < features; i++) {
         float activation = 0.0;
         for (int j = 0; j < features; j++) {
