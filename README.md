@@ -14,3 +14,5 @@ A simple implementation of traditional Hopfield Networks (w/ binary states) in C
 
 - ["Hopfield Networks is All You Need" (Paper)](https://arxiv.org/abs/2008.02217)
 
+- [Good Blog Reference on Hopfield Networks](https://ml-jku.github.io/hopfield-layers/)
+
